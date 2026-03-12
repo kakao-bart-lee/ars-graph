@@ -103,7 +103,7 @@ export const labelStrategies: Record<'arsContexta' | 'primaryOnly' | 'zoomed' | 
     if (ctx.highlightedIds.has(node.id)) return true
     if (ctx.zoom > 1.8) return true
     // Show labels for hub nodes (high degree) and primary nodes
-    const isHub = node.isPrimary || node.degree >= 10
+    const isHub = node.isPrimary || node.degree >= ctx.hubDegreeThreshold
     if (isHub) return true
     if (ctx.zoom > 0.6 && node.isPrimary) return true
     return ctx.alwaysShowPrimaryLabels && !!node.isPrimary

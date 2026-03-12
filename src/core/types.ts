@@ -128,6 +128,7 @@ export type LabelVisibilityContext = {
   selectedId: string | null
   highlightedIds: Set<string>
   alwaysShowPrimaryLabels: boolean
+  hubDegreeThreshold: number
 }
 
 export type LabelStrategy = (node: RenderNode, context: LabelVisibilityContext) => boolean
