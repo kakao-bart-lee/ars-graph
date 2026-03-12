@@ -90,9 +90,10 @@ const defaultDrawNode = ({ ctx, node, state, radius, screen, theme }: DrawNodeAr
   const rgb = node.isPrimary ? theme.accentRgb : theme.nodeRgb
 
   // Opaque background circle to occlude edges behind the node
+  const bgColor = theme.background === 'transparent' ? '#060706' : theme.background
   ctx.beginPath()
   ctx.arc(screen.x, screen.y, radius + 0.5, 0, Math.PI * 2)
-  ctx.fillStyle = theme.background
+  ctx.fillStyle = bgColor
   ctx.fill()
 
   // Node fill — fully opaque, dimmed only by visibility
@@ -128,8 +129,10 @@ export const drawScene = ({
   const camera = snapshot.camera
 
   ctx.clearRect(0, 0, width, height)
-  ctx.fillStyle = theme.background
-  ctx.fillRect(0, 0, width, height)
+  if (theme.background !== 'transparent') {
+    ctx.fillStyle = theme.background
+    ctx.fillRect(0, 0, width, height)
+  }
 
   const visibleNodes = nodes.filter((node) => Number.isFinite(node.x) && Number.isFinite(node.y))
 
