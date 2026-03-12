@@ -320,17 +320,22 @@ export class GraphController {
       if (progress >= 1) this.focusAnimation.active = false
     }
 
+    // Brightness levels: faded=0.08, normal=0.54, focused=1.0
+    const FADED = 0.08
+    const NORMAL = 0.54
+    const FOCUSED = 1.0
+
     for (const node of this.nodes) {
-      let target = 1
+      let target = NORMAL
       // The "active" node is hovered if present, otherwise selected (keeps focus on selection)
       const activeId = this.snapshot.hoveredId ?? this.snapshot.selectedId
       if (activeId) {
         const neighbors = this.adjacency.get(activeId)
-        target = node.id === activeId || neighbors?.has(node.id) ? 1 : 0.08
+        target = node.id === activeId || neighbors?.has(node.id) ? FOCUSED : FADED
       } else if (this.snapshot.highlightedIds.size > 0) {
-        target = this.snapshot.highlightedIds.has(node.id) ? 1 : 0.08
+        target = this.snapshot.highlightedIds.has(node.id) ? FOCUSED : FADED
       }
-      const current = this.visibility.get(node.id) ?? 1
+      const current = this.visibility.get(node.id) ?? NORMAL
       const next = current + (target - current) * Math.min(1, 0.0018 * dt)
       this.visibility.set(node.id, next)
     }

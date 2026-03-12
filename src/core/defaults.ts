@@ -19,7 +19,7 @@ export const defaultTheme: GraphTheme = {
   fontFamily: `"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace`,
 }
 
-const radius = (node: RenderNode) => Math.max(3, Math.min(8, 2.5 + 1.2 * Math.sqrt(node.degree || 1)))
+const radius = (node: RenderNode) => Math.max(3, Math.min(12, 2.5 + 1.4 * Math.sqrt(node.degree || 1)))
 
 export const defaultEdgeKinds: EdgeKindPresetMap = {
   default: {
@@ -102,6 +102,9 @@ export const labelStrategies: Record<'arsContexta' | 'primaryOnly' | 'zoomed' | 
     if (node.id === ctx.focusedId || node.id === ctx.hoveredId || node.id === ctx.selectedId) return true
     if (ctx.highlightedIds.has(node.id)) return true
     if (ctx.zoom > 1.8) return true
+    // Show labels for hub nodes (high degree) and primary nodes
+    const isHub = node.isPrimary || node.degree >= 6
+    if (isHub) return true
     if (ctx.zoom > 0.6 && node.isPrimary) return true
     return ctx.alwaysShowPrimaryLabels && !!node.isPrimary
   },
