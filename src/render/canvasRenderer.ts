@@ -92,9 +92,8 @@ const defaultDrawEdge = ({ ctx, state, source, target, theme, kindStyle, now, ed
   }
 }
 
-const defaultDrawNode = ({ ctx, node, state, radius, screen, theme }: DrawNodeArgs, hubDegreeThreshold: number) => {
+const defaultDrawNode = ({ ctx, node, state, radius, screen, theme }: DrawNodeArgs, hubDegreeThreshold: number, color: string) => {
   const isHub = node.isPrimary || node.degree >= hubDegreeThreshold
-  const rgb = isHub ? theme.accentRgb : theme.nodeRgb
 
   // Opaque background circle to occlude edges behind the node
   const bgColor = theme.background === 'transparent' ? '#060706' : theme.background
@@ -103,11 +102,10 @@ const defaultDrawNode = ({ ctx, node, state, radius, screen, theme }: DrawNodeAr
   ctx.fillStyle = bgColor
   ctx.fill()
 
-  // Node fill — fully opaque, dimmed only by visibility
-  const alpha = state.opacity
+  // Node fill — use the color from styling.nodeColor
   ctx.beginPath()
   ctx.arc(screen.x, screen.y, radius, 0, Math.PI * 2)
-  ctx.fillStyle = `rgba(${rgb}, ${alpha})`
+  ctx.fillStyle = color
   ctx.fill()
 
   // Glow ring for hub nodes
@@ -215,7 +213,8 @@ export const drawScene = ({
 
     const customHandled = styling.drawNode?.({ ctx, node, state, radius, screen, theme })
     if (customHandled !== true) {
-      defaultDrawNode({ ctx, node, state, radius, screen, theme }, styling.hubDegreeThreshold)
+      const color = styling.nodeColor(node, state, theme)
+      defaultDrawNode({ ctx, node, state, radius, screen, theme }, styling.hubDegreeThreshold, color)
     }
   }
 

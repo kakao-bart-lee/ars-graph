@@ -72,6 +72,7 @@ export class GraphController {
   private adjacency = new Map<string, Set<string>>()
   private visibility = new Map<string, number>()
   private hitIndex = rebuildHitIndex([])
+  private hitIndexDirty = true
   private onStateChange?: (snapshot: GraphSnapshot) => void
   private onNodeClick?: (node: RenderNode) => void
   private onNodeDoubleClick?: (node: RenderNode) => void
@@ -190,6 +191,7 @@ export class GraphController {
 
     for (const node of this.nodes) this.visibility.set(node.id, 1)
 
+    this.hitIndexDirty = true
     this.simulation?.stop()
     this.simulation = createForceLayout(this.nodes, this.edges, this.options.layout, this.options.edgeKinds)
   }
@@ -337,7 +339,11 @@ export class GraphController {
       this.visibility.set(node.id, next)
     }
 
-    this.hitIndex = rebuildHitIndex(this.nodes)
+    const simAlpha = this.simulation?.alpha() ?? 0
+    if (this.hitIndexDirty || simAlpha > this.options.layout.alphaMin || this.dragNode) {
+      this.hitIndex = rebuildHitIndex(this.nodes)
+      this.hitIndexDirty = simAlpha > this.options.layout.alphaMin || !!this.dragNode
+    }
     drawScene({
       ctx: this.ctx,
       width: this.container.clientWidth,
