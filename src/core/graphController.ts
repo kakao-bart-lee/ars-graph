@@ -320,10 +320,7 @@ export class GraphController {
       if (progress >= 1) this.focusAnimation.active = false
     }
 
-    // Brightness levels: faded=0.08, normal=0.54, focused=1.0
-    const FADED = 0.08
-    const NORMAL = 0.54
-    const FOCUSED = 1.0
+    const [FADED, NORMAL, FOCUSED] = this.options.styling.brightness
 
     for (const node of this.nodes) {
       let target = NORMAL
