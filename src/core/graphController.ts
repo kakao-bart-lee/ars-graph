@@ -72,6 +72,7 @@ export class GraphController {
   private adjacency = new Map<string, Set<string>>()
   private visibility = new Map<string, number>()
   private hitIndex = rebuildHitIndex([])
+  private hitIndexDirty = true
   private onStateChange?: (snapshot: GraphSnapshot) => void
   private onNodeClick?: (node: RenderNode) => void
   private onNodeDoubleClick?: (node: RenderNode) => void
@@ -190,6 +191,7 @@ export class GraphController {
 
     for (const node of this.nodes) this.visibility.set(node.id, 1)
 
+    this.hitIndexDirty = true
     this.simulation?.stop()
     this.simulation = createForceLayout(this.nodes, this.edges, this.options.layout, this.options.edgeKinds)
   }
@@ -320,21 +322,28 @@ export class GraphController {
       if (progress >= 1) this.focusAnimation.active = false
     }
 
+    const [FADED, NORMAL, FOCUSED] = this.options.styling.brightness
+
     for (const node of this.nodes) {
-      let target = 1
-      if (this.snapshot.hoveredId) {
-        const hovered = this.snapshot.hoveredId
-        const neighbors = this.adjacency.get(hovered)
-        target = node.id === hovered || neighbors?.has(node.id) ? 1 : 0.08
+      let target = NORMAL
+      // The "active" node is hovered if present, otherwise selected (keeps focus on selection)
+      const activeId = this.snapshot.hoveredId ?? this.snapshot.selectedId
+      if (activeId) {
+        const neighbors = this.adjacency.get(activeId)
+        target = node.id === activeId || neighbors?.has(node.id) ? FOCUSED : FADED
       } else if (this.snapshot.highlightedIds.size > 0) {
-        target = this.snapshot.highlightedIds.has(node.id) ? 1 : 0.08
+        target = this.snapshot.highlightedIds.has(node.id) ? FOCUSED : FADED
       }
-      const current = this.visibility.get(node.id) ?? 1
+      const current = this.visibility.get(node.id) ?? NORMAL
       const next = current + (target - current) * Math.min(1, 0.0018 * dt)
       this.visibility.set(node.id, next)
     }
 
-    this.hitIndex = rebuildHitIndex(this.nodes)
+    const simAlpha = this.simulation?.alpha() ?? 0
+    if (this.hitIndexDirty || simAlpha > this.options.layout.alphaMin || this.dragNode) {
+      this.hitIndex = rebuildHitIndex(this.nodes)
+      this.hitIndexDirty = simAlpha > this.options.layout.alphaMin || !!this.dragNode
+    }
     drawScene({
       ctx: this.ctx,
       width: this.container.clientWidth,
