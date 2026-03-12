@@ -103,7 +103,7 @@ export const labelStrategies: Record<'arsContexta' | 'primaryOnly' | 'zoomed' | 
     if (ctx.highlightedIds.has(node.id)) return true
     if (ctx.zoom > 1.8) return true
     // Show labels for hub nodes (high degree) and primary nodes
-    const isHub = node.isPrimary || node.degree >= 6
+    const isHub = node.isPrimary || node.degree >= 8
     if (isHub) return true
     if (ctx.zoom > 0.6 && node.isPrimary) return true
     return ctx.alwaysShowPrimaryLabels && !!node.isPrimary
@@ -135,6 +135,10 @@ export const defaultStyling: GraphStylingOptions = {
   },
   edgeParticleDensity: 1,
   weakEdgeCullDistance: 220,
+  hubDegreeThreshold: 8,
+  particleSpeed: 1.0,
+  brightness: [0.08, 0.54, 1.0],
+  crispEdges: false,
 }
 
 export const defaultOptions: GraphControllerOptions = {

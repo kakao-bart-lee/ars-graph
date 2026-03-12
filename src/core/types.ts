@@ -165,6 +165,14 @@ export type GraphStylingOptions = {
   weakEdgeCullDistance: number
   drawNode?: (args: DrawNodeArgs) => boolean | void
   drawEdge?: (args: DrawEdgeArgs) => boolean | void
+  /** Degree threshold for hub nodes (accent color, larger radius, always-on label). Default: 8 */
+  hubDegreeThreshold: number
+  /** Particle travel speed multiplier. 1.0 = default, 0.5 = half speed. Default: 1.0 */
+  particleSpeed: number
+  /** Brightness levels: [faded, normal, focused]. Default: [0.08, 0.54, 1.0] */
+  brightness: [number, number, number]
+  /** Reduce anti-aliasing for crisper edges. Default: false */
+  crispEdges: boolean
 }
 
 export type GraphControllerOptions = {

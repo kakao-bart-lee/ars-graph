@@ -48,22 +48,22 @@ const makeNodeState = (
   }
 }
 
-// Brightness levels: faded=0.08, normal=0.54, focused=1.0
-const BRIGHTNESS_FADED = 0.08
-const BRIGHTNESS_NORMAL = 0.54
-const BRIGHTNESS_FOCUSED = 1.0
-
-const edgeOpacity = (edge: RenderEdge, snapshot: GraphSnapshot, adjacency: Map<string, Set<string>>) => {
-  // The "active" node is hovered if present, otherwise selected
+const edgeOpacity = (
+  edge: RenderEdge,
+  snapshot: GraphSnapshot,
+  adjacency: Map<string, Set<string>>,
+  brightness: [number, number, number],
+) => {
+  const [faded, normal, focused] = brightness
   const activeId = snapshot.hoveredId ?? snapshot.selectedId
-  if (!activeId && snapshot.highlightedIds.size === 0) return BRIGHTNESS_NORMAL
-  if (activeId && (edge.source.id === activeId || edge.target.id === activeId)) return BRIGHTNESS_FOCUSED
-  if (snapshot.highlightedIds.has(edge.source.id) && snapshot.highlightedIds.has(edge.target.id)) return BRIGHTNESS_FOCUSED
+  if (!activeId && snapshot.highlightedIds.size === 0) return normal
+  if (activeId && (edge.source.id === activeId || edge.target.id === activeId)) return focused
+  if (snapshot.highlightedIds.has(edge.source.id) && snapshot.highlightedIds.has(edge.target.id)) return focused
   if (activeId) {
     const neighbors = adjacency.get(activeId)
-    if (neighbors?.has(edge.source.id) || neighbors?.has(edge.target.id)) return 0.45
+    if (neighbors?.has(edge.source.id) || neighbors?.has(edge.target.id)) return (normal + focused) / 2
   }
-  return BRIGHTNESS_FADED
+  return faded
 }
 
 export const rebuildHitIndex = (nodes: RenderNode[]) =>
@@ -72,15 +72,16 @@ export const rebuildHitIndex = (nodes: RenderNode[]) =>
     .y((node) => node.y)
     .addAll(nodes.filter((node) => Number.isFinite(node.x) && Number.isFinite(node.y)))
 
-const defaultDrawEdge = ({ ctx, state, source, target, theme, kindStyle, now, edgeIndex }: DrawEdgeArgs) => {
+const defaultDrawEdge = ({ ctx, state, source, target, theme, kindStyle, now, edgeIndex }: DrawEdgeArgs, particleSpeed: number) => {
   ctx.beginPath()
   ctx.moveTo(source.x, source.y)
   ctx.lineTo(target.x, target.y)
   ctx.stroke()
 
   if (!kindStyle.weak && kindStyle.particleCount > 0 && state.opacity > 0.2) {
+    const speed = 0.0002 * particleSpeed
     for (let particleIndex = 0; particleIndex < kindStyle.particleCount; particleIndex += 1) {
-      const t = ((0.0002 * now) + ((0.618 * edgeIndex) % 1) + particleIndex * 0.5) % 1
+      const t = ((speed * now) + ((0.618 * edgeIndex) % 1) + particleIndex * 0.5) % 1
       const px = source.x + (target.x - source.x) * t
       const py = source.y + (target.y - source.y) * t
       ctx.beginPath()
@@ -91,11 +92,8 @@ const defaultDrawEdge = ({ ctx, state, source, target, theme, kindStyle, now, ed
   }
 }
 
-// Hub threshold: nodes with degree >= this get accent color
-const HUB_DEGREE_THRESHOLD = 6
-
-const defaultDrawNode = ({ ctx, node, state, radius, screen, theme }: DrawNodeArgs) => {
-  const isHub = node.isPrimary || node.degree >= HUB_DEGREE_THRESHOLD
+const defaultDrawNode = ({ ctx, node, state, radius, screen, theme }: DrawNodeArgs, hubDegreeThreshold: number) => {
+  const isHub = node.isPrimary || node.degree >= hubDegreeThreshold
   const rgb = isHub ? theme.accentRgb : theme.nodeRgb
 
   // Opaque background circle to occlude edges behind the node
@@ -152,6 +150,11 @@ export const drawScene = ({
     ctx.fillRect(0, 0, width, height)
   }
 
+  // Apply crispEdges: disable anti-aliasing for sharper lines
+  if (styling.crispEdges) {
+    ctx.imageSmoothingEnabled = false
+  }
+
   const visibleNodes = nodes.filter((node) => Number.isFinite(node.x) && Number.isFinite(node.y))
 
   edges.forEach((edge, edgeIndex) => {
@@ -167,7 +170,7 @@ export const drawScene = ({
     const cullDistance = kindStyle.cullDistance ?? (kindStyle.weak ? options.styling.weakEdgeCullDistance : undefined)
     if (cullDistance && dx * dx + dy * dy > cullDistance ** 2) return
 
-    const opacity = edgeOpacity(edge, snapshot, adjacency)
+    const opacity = edgeOpacity(edge, snapshot, adjacency, styling.brightness)
     const state = {
       focused: opacity >= 1,
       highlighted: opacity > 0.4,
@@ -192,7 +195,7 @@ export const drawScene = ({
 
     ctx.strokeStyle = styling.edgeColor(edge, state, theme, kindStyle)
     ctx.lineWidth = styling.edgeWidth(edge, state, kindStyle)
-    defaultDrawEdge({ ctx, edge, state, source, target, theme, kindStyle, now, edgeIndex })
+    defaultDrawEdge({ ctx, edge, state, source, target, theme, kindStyle, now, edgeIndex }, styling.particleSpeed)
   })
 
   ctx.textAlign = 'center'
@@ -214,7 +217,7 @@ export const drawScene = ({
 
     const customHandled = styling.drawNode?.({ ctx, node, state, radius, screen, theme })
     if (customHandled !== true) {
-      defaultDrawNode({ ctx, node, state, radius, screen, theme })
+      defaultDrawNode({ ctx, node, state, radius, screen, theme }, styling.hubDegreeThreshold)
     }
   }
 
