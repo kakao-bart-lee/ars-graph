@@ -151,9 +151,7 @@ export const drawScene = ({
   }
 
   // Apply crispEdges: disable anti-aliasing for sharper lines
-  if (styling.crispEdges) {
-    ctx.imageSmoothingEnabled = false
-  }
+  ctx.imageSmoothingEnabled = !styling.crispEdges
 
   const visibleNodes = nodes.filter((node) => Number.isFinite(node.x) && Number.isFinite(node.y))
 
@@ -254,6 +252,7 @@ export const drawScene = ({
       selectedId: snapshot.selectedId,
       highlightedIds: snapshot.highlightedIds,
       alwaysShowPrimaryLabels,
+      hubDegreeThreshold: styling.hubDegreeThreshold,
     }
 
     // Also show labels for neighbors of the active (hovered or selected) node
