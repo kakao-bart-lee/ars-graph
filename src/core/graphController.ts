@@ -322,10 +322,11 @@ export class GraphController {
 
     for (const node of this.nodes) {
       let target = 1
-      if (this.snapshot.hoveredId) {
-        const hovered = this.snapshot.hoveredId
-        const neighbors = this.adjacency.get(hovered)
-        target = node.id === hovered || neighbors?.has(node.id) ? 1 : 0.08
+      // The "active" node is hovered if present, otherwise selected (keeps focus on selection)
+      const activeId = this.snapshot.hoveredId ?? this.snapshot.selectedId
+      if (activeId) {
+        const neighbors = this.adjacency.get(activeId)
+        target = node.id === activeId || neighbors?.has(node.id) ? 1 : 0.08
       } else if (this.snapshot.highlightedIds.size > 0) {
         target = this.snapshot.highlightedIds.has(node.id) ? 1 : 0.08
       }

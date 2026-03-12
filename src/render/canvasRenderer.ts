@@ -49,11 +49,13 @@ const makeNodeState = (
 }
 
 const edgeOpacity = (edge: RenderEdge, snapshot: GraphSnapshot, adjacency: Map<string, Set<string>>) => {
-  if (!snapshot.hoveredId && snapshot.highlightedIds.size === 0) return 1
-  if (snapshot.hoveredId && (edge.source.id === snapshot.hoveredId || edge.target.id === snapshot.hoveredId)) return 1
+  // The "active" node is hovered if present, otherwise selected
+  const activeId = snapshot.hoveredId ?? snapshot.selectedId
+  if (!activeId && snapshot.highlightedIds.size === 0) return 1
+  if (activeId && (edge.source.id === activeId || edge.target.id === activeId)) return 1
   if (snapshot.highlightedIds.has(edge.source.id) && snapshot.highlightedIds.has(edge.target.id)) return 1
-  if (snapshot.hoveredId) {
-    const neighbors = adjacency.get(snapshot.hoveredId)
+  if (activeId) {
+    const neighbors = adjacency.get(activeId)
     if (neighbors?.has(edge.source.id) || neighbors?.has(edge.target.id)) return 0.45
   }
   return 0.08
@@ -86,14 +88,21 @@ const defaultDrawEdge = ({ ctx, state, source, target, theme, kindStyle, now, ed
 
 const defaultDrawNode = ({ ctx, node, state, radius, screen, theme }: DrawNodeArgs) => {
   const rgb = node.isPrimary ? theme.accentRgb : theme.nodeRgb
-  const alpha = (node.isPrimary ? 0.72 : 0.55) * state.opacity
 
+  // Opaque background circle to occlude edges behind the node
+  ctx.beginPath()
+  ctx.arc(screen.x, screen.y, radius + 0.5, 0, Math.PI * 2)
+  ctx.fillStyle = theme.background
+  ctx.fill()
+
+  // Node fill — fully opaque, dimmed only by visibility
+  const alpha = state.opacity
   ctx.beginPath()
   ctx.arc(screen.x, screen.y, radius, 0, Math.PI * 2)
   ctx.fillStyle = `rgba(${rgb}, ${alpha})`
   ctx.fill()
 
-  if (state.focused) {
+  if (state.focused || state.selected) {
     ctx.beginPath()
     ctx.arc(screen.x, screen.y, radius + 2.5, 0, Math.PI * 2)
     ctx.strokeStyle = `rgba(${theme.accentRgb}, ${0.6 * state.opacity})`
@@ -205,6 +214,10 @@ export const drawScene = ({
     }
   }
 
+  // Build set of neighbor IDs for the active node (hovered or selected)
+  const activeId = snapshot.hoveredId ?? snapshot.selectedId
+  const activeNeighborIds = activeId ? adjacency.get(activeId) ?? new Set<string>() : new Set<string>()
+
   for (const node of visibleNodes) {
     const radius = styling.nodeRadius(node) * camera.k
     if (radius < 0.3) continue
@@ -218,11 +231,15 @@ export const drawScene = ({
       alwaysShowPrimaryLabels,
     }
 
-    if (!styling.showLabel(node, context)) continue
+    // Also show labels for neighbors of the active (hovered or selected) node
+    const isActiveNeighbor = activeId ? (node.id === activeId || activeNeighborIds.has(node.id)) : false
+    if (!isActiveNeighbor && !styling.showLabel(node, context)) continue
 
     const screen = worldToScreen(node, camera)
     const opacity = visibility.get(node.id) ?? 1
-    const fontSize = styling.labelFontSize(node, context)
+    const fontSize = isActiveNeighbor && node.id !== activeId
+      ? Math.max(9, styling.labelFontSize(node, context))
+      : styling.labelFontSize(node, context)
     ctx.font = `${fontSize}px ${theme.fontFamily}`
     ctx.fillStyle = `rgba(${theme.labelRgb}, ${Math.max(0.06, Math.min(0.92, opacity))})`
 
