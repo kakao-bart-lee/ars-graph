@@ -17,6 +17,7 @@
     "dist"
   ],
   "scripts": {
+    "prepare": "tsup",
     "build": "tsup && vite build demo",
     "build:lib": "tsup",
     "build:demo": "vite build demo",
